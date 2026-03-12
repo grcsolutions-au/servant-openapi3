@@ -14,7 +14,8 @@ import           Servant.API
 import           Servant.API.Generic (ToServantApi)
 #endif
 #if MIN_VERSION_servant(0,20,3)
-import Servant.API.MultiVerb (MultiVerb, ResponseTypes)
+import Servant.API.MultiVerb (MultiVerb, Respond, RespondAs, RespondStreaming, WithHeaders, GenericAsConstructor)
+import Data.ByteString (ByteString)
 #endif
 -- | Build a list of endpoints from an API.
 type family EndpointsList api where
@@ -92,7 +93,7 @@ type family BodyTypes' c api :: [*] where
   BodyTypes' c (Verb verb b cs NoContent) = '[]
   BodyTypes' c (Verb verb b cs a) = AddBodyType c cs a '[]
 #if MIN_VERSION_servant(0,20,3)
-  BodyTypes' c (MultiVerb verb cs as _) = AddBodyType c cs () (ResponseTypes as)
+  BodyTypes' c (MultiVerb verb cs as _) = AddBodyType c cs () (MultiVerbResponseBodies as)
 #endif
   BodyTypes' c (ReqBody' mods cs a :> api) = AddBodyType c cs a (BodyTypes' c api)
   BodyTypes' c (e :> api) = BodyTypes' c api
@@ -101,3 +102,32 @@ type family BodyTypes' c api :: [*] where
   BodyTypes' c (NamedRoutes api) = BodyTypes' c (ToServantApi api)
 #endif
   BodyTypes' c api = '[]
+
+
+#if MIN_VERSION_servant(0,20,3)
+-- | The 'ResponseTypes' class allows to extract all types
+-- involved in a response, whether or not this type is
+-- in the body of the response, or, for example, in a header.
+--
+-- This is problematic because, if the response contains a header (e.g. `Header "Set-Cookie" SetCookie`),
+-- then the header type also needs instances for `To/FromJSON` and `Arbitrary`
+-- for testing purposes, even though this isn't needed in practice.
+--
+-- We want to extract only the body, for which there is no
+-- built-in functionality at this time.
+--
+-- See Servant.API.MultiVerb.ResponseTypes for an example of how
+-- this mechanism can be implemented
+type family MultiVerbResponseBody a
+
+type instance MultiVerbResponseBody (Respond s description a) = a
+type instance MultiVerbResponseBody (RespondAs contentType s description a) = a
+type instance MultiVerbResponseBody (RespondStreaming s description framing contentType) = SourceIO ByteString
+-- The following instance is the main difference between 'MultiVerbResponseBody' and 'ResponseType'
+type instance MultiVerbResponseBody (WithHeaders headers returnType response) = MultiVerbResponseBody response
+type instance MultiVerbResponseBody (GenericAsConstructor r) = MultiVerbResponseBody r
+
+type family MultiVerbResponseBodies (as :: [*]) where
+  MultiVerbResponseBodies '[] = '[]
+  MultiVerbResponseBodies (a ': as) = MultiVerbResponseBody a ': MultiVerbResponseBodies as
+#endif
