@@ -26,7 +26,7 @@ author:              David Johnson, Nickolay Kudasov, Maxim Koltsov
 maintainer:          nickolay.kudasov@gmail.com, kolmax94@gmail.com
 copyright:           (c) 2015-2020, Servant contributors
 category:            Web, Servant, Swagger
-build-type:          Custom
+build-type:          Simple
 cabal-version:       1.18
 tested-with:
   GHC ==8.6.5
@@ -56,12 +56,6 @@ extra-doc-files:
 source-repository head
   type:     git
   location: https://github.com/biocad/servant-openapi3.git
-
-custom-setup
-  setup-depends:
-    base >=4.9 && <4.22,
-    Cabal >= 1.24 && < 4,
-    cabal-doctest >=1.0.6 && <1.1
 
 library
   ghc-options:         -Wall
